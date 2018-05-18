@@ -5,164 +5,228 @@
 
 require_once("PriorityQueue.php");
 
-class Edge {
+class Edge
+{
 
-	public $start;
-	public $end;
-	public $weight;
+    public $start;
+    public $end;
+    public $weight;
 
-	public function __construct($start, $end, $weight) {
-		$this->start = $start;
-		$this->end = $end;
-		$this->weight = $weight;
-	}
+    public function __construct($start, $end, $weight)
+    {
+        $this->start = $start;
+        $this->end = $end;
+        $this->weight = $weight;
+    }
 }
 
-class Graph {
+class Graph
+{
 
-	public $nodes = array();
+    public $nodes = array();
 
-	public function generateRandom(&$p_from, &$p_to){
-			$fromi = NULL;
+    /**
+     * @param int $nodesCount
+     * @param int $edgeCount
+     */
+    public function generateRandom($nodesCount = 10, $edgeCount = 50)
+    {
 
-			for($a = 0; $a < rand(30,100);$a++){
+        $nodes = range(0, $nodesCount);
 
-				$from = 97+rand(0,24);
-				if(is_null($fromi)){
-					$fromi = $from;
-				}
+        $nodes = array_map(function($int){
+            return chr(97 + $int);
+        },$nodes);
 
-				$to = 97+rand(0,24);
+        for ($a = 0; $a < $edgeCount; $a++) {
 
-				if($from == $to){
-					$to++;
-				}
+            list($from,$to) = array_rand($nodes,2);
 
-				$to = chr($to);
-				$from = chr($from);
-				if(!$this->hasEdge($from, $to)){
+            $from = $nodes[$from];
+            $to = $nodes[$to];
 
-					$this->addedge($from, $to, rand(1,100));
+            if (!$this->hasEdge($from, $to)) {
+                $this->addedge($from, $to, rand(1, 100));
+            }
 
-				}
+        }
+    }
 
-			}
+    /**
+     * Saves the graph to a .dot file
+     * @param $path
+     */
+    public function toDotFile($path)
+    {
+        $myfile = fopen("graph.dot", "w") or die("Unable to open file!");
+        $out = 'digraph graphname {' . PHP_EOL;
+        foreach ($this->nodes as $key => $start) {
+            foreach ($this->nodes[$key] as $edge) {
+                $out .= $edge->start . ' -> ' . $edge->end . '[label="' . $edge->weight . '"';
+                $key_a = array_search($edge->start, $path);
+                if (($key_a !== false) && array_key_exists($key_a + 1, $path)) {
+                    if ($path[$key_a + 1] == $edge->end) {
+                        $out .= "color=red,penwidth=3.0";
+                    }
+                }
+                $out .= '];' . PHP_EOL;
+            }
+        }
+        $out .= '}' . PHP_EOL;
+        fwrite($myfile, $out);
+        fclose($myfile);
+    }
 
-			$p_from = chr($fromi);
-			$p_to = $to;
-	}
+    /**
+     * Returns TRUE if there is an edge bethween $from and $to
+     * @param $start
+     * @param $end
+     * @return bool
+     */
+    public function hasEdge($start, $end)
+    {
+        if (array_key_exists($start, $this->nodes)) {
+            foreach ($this->nodes[$start] as $edge) {
+                if ($edge->end == $end) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
-	public function toDotFile($path){
-		$myfile = fopen("graph.dot", "w") or die("Unable to open file!");
-			$out = 'digraph graphname {'.PHP_EOL;
-			foreach($this->nodes as $key => $start){
-					foreach($this->nodes[$key] as $edge){
-							$out .= $edge->start. ' -> '. $edge->end.'[label="'.$edge->weight.'"';
-							$key_a = array_search( $edge->start, $path);
-							if(($key_a !== false) && array_key_exists($key_a+1,$path)){
-								if($path[$key_a+1] == $edge->end){
-									$out .= "color=red,penwidth=3.0"; //",style=bold,color=red";
-								}
-							}
-							$out .= '];'.PHP_EOL;
-					}
-			}
- 	 		$out .= '}'.PHP_EOL;
-			fwrite($myfile, $out);
-			fclose($myfile);
-	}
+    /**
+     * Returns the list of the names of the nodes
+     * @return mixed
+     */
+    public function randomNodes()
+    {
+        return array_rand($this->allNodes(), 2);
+    }
 
-	public function hasEdge($start, $end){
-		if(array_key_exists($start,$this->nodes)){
-			foreach($this->nodes[$start] as $edge){
-				if($edge->end == $end){
-					return true;
-				}
-			}
-		}
-		return false;
-	}
+    /**
+     * @param $start
+     * @param $end
+     * @param int $weight
+     */
+    public function addedge($start, $end, $weight = 0)
+    {
+        if (!isset($this->nodes[$start])) {
+            $this->nodes[$start] = array();
+        }
+        array_push($this->nodes[$start], new Edge($start, $end, $weight));
+    }
 
-	public function addedge($start, $end, $weight = 0) {
-		if (!isset($this->nodes[$start])) {
-			$this->nodes[$start] = array();
-		}
-		array_push($this->nodes[$start], new Edge($start, $end, $weight));
-	}
+    /**
+     * @param $index
+     */
+    public function removenode($index)
+    {
+        array_splice($this->nodes, $index, 1);
+    }
 
-    public function removenode($index) {
-		array_splice($this->nodes, $index, 1);
-	}
+    /**
+     * @return array
+     */
+    public function allNodes()
+    {
+        $nodes = array_combine(array_keys($this->nodes), array_keys($this->nodes));
+        foreach ($this->nodes as $key => $start) {
+            foreach ($this->nodes[$key] as $edge) {
+                if (!array_key_exists($edge->end, $nodes)) {
+                    $nodes[$edge->end] = $edge->end;
+                }
+            }
+        }
+        return $nodes;
+    }
 
+    /**
+     * @param $from
+     * @return array
+     */
+    public function paths_from($from)
+    {
+        $dist = array();
+        $dist[$from] = 0;
 
-	public function paths_from($from) {
-		$dist = array();
-		$dist[$from] = 0;
+        $visited = array();
 
-		$visited = array();
+        $previous = array();
 
-		$previous = array();
+        $queue = array();
+        $Q = new PriorityQueue("compareWeights");
+        $Q->add(array($dist[$from], $from));
 
-		$queue = array();
-		$Q = new PriorityQueue("compareWeights");
-		$Q->add(array($dist[$from], $from));
+        $nodes = $this->nodes;
 
-		$nodes = $this->nodes;
+        while ($Q->size() > 0) {
+            list($distance, $u) = $Q->remove();
 
-		while($Q->size() > 0) {
-			list($distance, $u) = $Q->remove();
+            if (isset($visited[$u])) {
+                continue;
+            }
+            $visited[$u] = True;
 
-			if (isset($visited[$u])) {
-				continue;
-			}
-			$visited[$u] = True;
+            if (!isset($nodes[$u])) {
+                print "WARNING: '$u' is not found in the node list\n";
+            }
 
-			if (!isset($nodes[$u])) {
-				print "WARNING: '$u' is not found in the node list\n";
-			}
+            foreach ($nodes[$u] as $edge) {
 
-			foreach($nodes[$u] as $edge) {
+                $alt = $dist[$u] + $edge->weight;
+                $end = $edge->end;
+                if (!isset($dist[$end]) || $alt < $dist[$end]) {
+                    $previous[$end] = $u;
+                    $dist[$end] = $alt;
+                    $Q->add(array($dist[$end], $end));
+                }
+            }
+        }
+        return array($dist, $previous);
+    }
 
-				$alt = $dist[$u] + $edge->weight;
-				$end = $edge->end;
-				if (!isset($dist[$end]) || $alt < $dist[$end]) {
-					$previous[$end] = $u;
-					$dist[$end] = $alt;
-					$Q->add(array($dist[$end], $end));
-				}
-			}
-		}
-		return array($dist, $previous);
-	}
+    /**
+     * @param $node_dsts
+     * @param $tonode
+     * @return array
+     */
+    public function paths_to($node_dsts, $tonode)
+    {
+        // unwind the previous nodes for the specific destination node
 
-	public function paths_to($node_dsts, $tonode) {
-		// unwind the previous nodes for the specific destination node
+        $current = $tonode;
+        $path = array();
 
-		$current = $tonode;
-		$path = array();
+        if (isset($node_dsts[$current])) { // only add if there is a path to node
+            array_push($path, $tonode);
+        }
+        while (isset($node_dsts[$current])) {
+            $nextnode = $node_dsts[$current];
 
-		if (isset($node_dsts[$current])) { // only add if there is a path to node
-			array_push($path, $tonode);
-		}
-		while(isset($node_dsts[$current])) {
-			$nextnode = $node_dsts[$current];
+            array_push($path, $nextnode);
 
-			array_push($path, $nextnode);
+            $current = $nextnode;
+        }
 
-			$current = $nextnode;
-		}
+        return array_reverse($path);
 
-		return array_reverse($path);
+    }
 
-	}
-
-	public function getpath($from, $to) {
-		list($distances, $prev) = $this->paths_from($from);
-		return $this->paths_to($prev, $to);
-	}
+    /**
+     * @param $from
+     * @param $to
+     * @return array
+     */
+    public function getpath($from, $to)
+    {
+        list($distances, $prev) = $this->paths_from($from);
+        return $this->paths_to($prev, $to);
+    }
 
 }
 
-function compareWeights($a, $b) {
-	return $a->data[0] - $b->data[0];
+function compareWeights($a, $b)
+{
+    return $a->data[0] - $b->data[0];
 }

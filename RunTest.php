@@ -6,20 +6,23 @@
 
 require("Dijkstra.php");
 
-function runTest() {
-	$g = new Graph();
+function runTest()
+{
+    $g = new Graph();
 
-	$from = "";
-	$to = "";
-	$g->generateRandom($from, $to);
+    $g->generateRandom();
 
-	list($distances, $prev) = $g->paths_from($from);
+    list($from, $to) = $g->randomNodes();
 
-	$path = $g->paths_to($prev, $to);
+    list($distances, $prev) = $g->paths_from($from);
 
-	print_r($path);
+    echo "path between $from and $to" . PHP_EOL;
 
-	$g->toDotFile($path);
+    $path = $g->paths_to($prev, $to);
+
+    print_r($path);
+
+    $g->toDotFile($path);
 
 }
 
